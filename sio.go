@@ -104,7 +104,7 @@ type Port struct {
 // any.
 //
 // Example:  sio.Open("/dev/ttyS0", 115200, sio.S8N1)
-func Open(dev string, rate int, conf Conf) (p *Port, err error) {
+func Open(dev string, rate int, conf Conf) (*Port, error) {
 	config, ok := configs[conf]
 	if !ok {
 		return nil, Error(fmt.Sprintf("sio.Open: Configuration Conf(%d) not supported", conf))
@@ -121,7 +121,7 @@ func Open(dev string, rate int, conf Conf) (p *Port, err error) {
 	}
 
 	options := &C.struct_termios{}
-	p, fd := &Port{f}, f.Fd()
+	fd := f.Fd()
 
 	if C.tcgetattr(C.int(fd), options) < 0 {
 		return nil, ErrGetAttr
@@ -147,7 +147,7 @@ func Open(dev string, rate int, conf Conf) (p *Port, err error) {
 		return nil, ErrDisablingBlocking
 	}
 
-	return
+	return &Port{f}, nil
 }
 
 // Close implements io.Close

@@ -4,6 +4,10 @@
 
 # blame: Jan Mercl
 
+test:
+	go test -i
+	go test
+
 install: sio.go sio.c
 	go install
 
