@@ -11,7 +11,7 @@ test:
 install: sio.go sio.c
 	go install
 
-example:
+example: example/main.go sio.c sio.go
 	cd example/
 	go build
 

@@ -10,11 +10,6 @@ license that can be found in the LICENSE file.
 
 */
 
-#include <sys/types.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <termios.h>
-
 #include "_cgo_export.h"
 
 void initRates() {
