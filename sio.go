@@ -2,7 +2,7 @@
 
 /*
 
-1) Original: Copyright (c) 2005-2008 Dustin Sallings <dustin@spy.net>. 
+1) Original: Copyright (c) 2005-2008 Dustin Sallings <dustin@spy.net>.
 
 2) Mods: Copyright (c) 2012 Schleibinger Geräte Teubert u. Greim GmbH
 <info@schleibinger.com>. Blame: Jan Mercl.
@@ -71,7 +71,7 @@ func Open(dev string, rate uint32) (p *Port, err error) {
 		Ispeed: rate,
 		Ospeed: rate,
 	}
-	if _, _, err := syscall.Syscall6(
+	if _, _, errno := syscall.Syscall6(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
 		uintptr(syscall.TCSETS),
@@ -79,8 +79,8 @@ func Open(dev string, rate uint32) (p *Port, err error) {
 		0,
 		0,
 		0,
-	); err != 0 {
-		return nil, err
+	); errno != 0 {
+		return nil, errno
 	}
 
 	if err = syscall.SetNonblock(int(fd), false); err != nil {
@@ -128,4 +128,116 @@ func (p *Port) SetReadDeadline(t time.Time) error {
 // Implementation of net.Conn
 func (p *Port) SetWriteDeadline(t time.Time) error {
 	return nil // Ignored
+}
+
+func (p *Port) setCtrlSignal(sig int, on bool) (err error) {
+	var state int
+	fd := p.f.Fd()
+
+	if _, _, errno := syscall.Syscall6(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		uintptr(syscall.TIOCMGET),
+		uintptr(unsafe.Pointer(&state)),
+		0,
+		0,
+		0,
+	); errno != 0 {
+		return errno
+	}
+
+	switch on {
+	case true:
+		state |= sig
+	case false:
+		state &^= sig
+	}
+
+	if _, _, errno := syscall.Syscall6(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		uintptr(syscall.TIOCMSET),
+		uintptr(unsafe.Pointer(&state)),
+		0,
+		0,
+		0,
+	); errno != 0 {
+		err = errno
+	}
+	return
+}
+
+func (p *Port) getCtrlSignal(sig int) (on bool, err error) {
+	var state int
+
+	if _, _, errno := syscall.Syscall6(
+		syscall.SYS_IOCTL,
+		uintptr(p.f.Fd()),
+		uintptr(syscall.TIOCMGET),
+		uintptr(unsafe.Pointer(&state)),
+		0,
+		0,
+		0,
+	); errno != 0 {
+		return false, errno
+	}
+
+	on = (state & sig) != 0
+	return
+}
+
+// GetDTR return the state of p's DTR or an error if any.  Depending on the
+// setup this signal may have the opposite direction than expected.  In such
+// case this function should not be used.
+func (p *Port) GetDTR() (on bool, err error) {
+	return p.getCtrlSignal(syscall.TIOCM_DTR)
+}
+
+// GetDSR return the state of p's DSR or an error if any.  Depending on the
+// setup this signal may have the opposite direction than expected.  In such
+// case this function should not be used.
+func (p *Port) GetDSR() (on bool, err error) {
+	return p.getCtrlSignal(syscall.TIOCM_DSR)
+}
+
+// GetCTS return the state of p's CTS or an error if any.  Depending on the
+// setup this signal may have the opposite direction than expected.  In such
+// case this function should not be used.
+func (p *Port) GetCTS() (on bool, err error) {
+	return p.getCtrlSignal(syscall.TIOCM_CTS)
+}
+
+// GetRTS return the state of p's RTS or an error if any.  Depending on the
+// setup this signal may have the opposite direction than expected.  In such
+// case this function should not be used.
+func (p *Port) GetRTS() (on bool, err error) {
+	return p.getCtrlSignal(syscall.TIOCM_RTS)
+}
+
+// SetDTR sets the state of p's DTR to `on`. A non nil error is returned on
+// failure.  Depending on the setup this signal may have the opposite direction
+// than expected.  In such case this function should not be used.
+func (p *Port) SetDTR(on bool) error {
+	return p.setCtrlSignal(syscall.TIOCM_DTR, on)
+}
+
+// SetDSR sets the state of p's DSR to `on`. A non nil error is returned on
+// failure.  Depending on the setup this signal may have the opposite direction
+// than expected.  In such case this function should not be used.
+func (p *Port) SetDSR(on bool) error {
+	return p.setCtrlSignal(syscall.TIOCM_DSR, on)
+}
+
+// SetCTS sets the state of p's CTS to `on`. A non nil error is returned on
+// failure.  Depending on the setup this signal may have the opposite direction
+// than expected.  In such case this function should not be used.
+func (p *Port) SetCTS(on bool) error {
+	return p.setCtrlSignal(syscall.TIOCM_CTS, on)
+}
+
+// SetRTS sets the state of p's RTS to `on`. A non nil error is returned on
+// failure.  Depending on the setup this signal may have the opposite direction
+// than expected.  In such case this function should not be used.
+func (p *Port) SetRTS(on bool) error {
+	return p.setCtrlSignal(syscall.TIOCM_RTS, on)
 }

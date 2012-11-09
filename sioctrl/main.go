@@ -15,10 +15,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
-	"runtime"
+	"log"
 	"syscall"
+	"time"
 
 	"github.com/schleibinger/sio"
 )
@@ -56,53 +55,65 @@ var bauds = map[int]uint32{
 	4000000: syscall.B4000000,
 }
 
-// Removed usage of "log", seems to cause "guru meditation" on Phytec's Phycard
-// for reasons not yet investigated.
-func logFatalf(format string, args ...interface{}) {
-	if _, file, line, ok := runtime.Caller(1); ok {
-		fmt.Printf("%s.%d: ", file, line)
-	}
-	fmt.Printf(format, args...)
-	if format != "" && format[len(format)-1] != '\n' {
-		fmt.Println()
-	}
-	os.Exit(1)
-}
-
 func main() {
+	oDTR := flag.Bool("dtr", false, "excercise the DTR control line")
+	oDSR := flag.Bool("dsr", false, "excercise the DSR control line")
+	oRTS := flag.Bool("rts", false, "excercise the RTS control line")
+	oCTS := flag.Bool("cts", false, "excercise the CTS control line")
+	oHalf := flag.Duration("t", 100*time.Millisecond, "flipping time")
 	baudRate := flag.Int("baud", 57600, "Baud rate")
-	dev := "/dev/ttyS0"
 	flag.Parse()
+	if !*oDTR && !*oRTS && !*oDSR && !*oCTS {
+		log.Fatal("Please specify at least on of -dtr -rts -dsr -cts")
+	}
+
+	dev := "/dev/ttyS0"
 	switch flag.NArg() {
 	case 0:
 		// nop
 	case 1:
 		dev = flag.Arg(0)
 	default:
-		logFatalf("expected max 1 arg: the serial port device, default is /dev/ttyS0")
+		log.Fatalf("expected max 1 arg: the serial port device, default is %s", dev)
 	}
 
 	port, err := sio.Open(dev, bauds[*baudRate])
 	if err != nil {
-		logFatalf("open: %s", err)
+		log.Fatal(err)
 	}
 
-	rxbuf := []byte{0}
-	ofs := 0
+	c := time.Tick(*oHalf)
+	var on bool
 	for {
-		n, err := port.Read(rxbuf)
-		if err != nil {
-			logFatalf("read: %s", err)
+		<-c
+		if *oDTR {
+			if err := port.SetDTR(on); err != nil {
+				port.Close()
+				log.Fatal(err)
+			}
 		}
 
-		if n != len(rxbuf) {
-			logFatalf("short read: %d %d", n, len(rxbuf))
+		if *oDSR {
+			if err := port.SetDSR(on); err != nil {
+				port.Close()
+				log.Fatal(err)
+			}
 		}
 
-		if ofs%16 == 0 {
-			fmt.Printf("\n%04x: ", ofs)
+		if *oRTS {
+			if err := port.SetRTS(on); err != nil {
+				port.Close()
+				log.Fatal(err)
+			}
 		}
-		fmt.Printf("%02x ", rxbuf[0])
-		ofs++
+
+		if *oCTS {
+			if err := port.SetCTS(on); err != nil {
+				port.Close()
+				log.Fatal(err)
+			}
+		}
+
+		on = !on
 	}
 }

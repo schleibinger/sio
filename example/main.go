@@ -2,13 +2,12 @@
 
 /*
 
-1) Original: Copyright (c) 2005-2008 Dustin Sallings <dustin@spy.net>. 
-
-2) Mods: Copyright (c) 2012 Schleibinger Geräte Teubert u. Greim GmbH
-<info@schleibinger.com>. Blame: Jan Mercl.
-
+Copyright (c) 2012 Schleibinger Geräte Teubert u. Greim GmbH
+<info@schleibinger.com>.
 All rights reserved.  Use of this source code is governed by a MIT-style
 license that can be found in the LICENSE file.
+
+blame: Jan Mercl
 
 */
 
