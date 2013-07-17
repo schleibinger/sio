@@ -5,7 +5,7 @@
 1) Original: Copyright (c) 2005-2008 Dustin Sallings <dustin@spy.net>.
 
 2) Mods: Copyright (c) 2012 Schleibinger Geräte Teubert u. Greim GmbH
-<info@schleibinger.com>. Blame: Jan Mercl.
+<info@schleibinger.com>. Blame: Jan Mercl
 
 All rights reserved.  Use of this source code is governed by a MIT-style
 license that can be found in the LICENSE file.
@@ -58,6 +58,11 @@ type Port struct {
 // Ex.: sio.Open("/dev/ttyS0", syscall.B115200)
 func Open(dev string, rate uint32) (p *Port, err error) {
 	var f *os.File
+	defer func() {
+		if err != nil && f != nil {
+			f.Close()
+		}
+	}()
 	f, err = os.OpenFile(dev, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NDELAY, 0666)
 	if err != nil {
 		return nil, err
