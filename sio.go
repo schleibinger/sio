@@ -1,4 +1,4 @@
-// +build linux
+// +build linux darwin
 
 /*
 
@@ -56,7 +56,7 @@ type Port struct {
 // mode (e.g. no HW nor XON/XOFF flow control).
 //
 // Ex.: sio.Open("/dev/ttyS0", syscall.B115200)
-func Open(dev string, rate uint32) (p *Port, err error) {
+func Open(dev string, rate uint64) (p *Port, err error) {
 	var f *os.File
 	defer func() {
 		if err != nil && f != nil {
@@ -72,14 +72,14 @@ func Open(dev string, rate uint32) (p *Port, err error) {
 	t := syscall.Termios{
 		Iflag:  syscall.IGNPAR,
 		Cflag:  syscall.CS8 | syscall.CREAD | syscall.CLOCAL | rate,
-		Cc:     [32]uint8{syscall.VMIN: 1},
+		Cc:     [termiosNCCS]uint8{syscall.VMIN: 1},
 		Ispeed: rate,
 		Ospeed: rate,
 	}
 	if _, _, errno := syscall.Syscall6(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(syscall.TCSETS),
+		uintptr(ioctlWriteTermios),
 		uintptr(unsafe.Pointer(&t)),
 		0,
 		0,
